@@ -29,6 +29,16 @@ Copy this directory into your Claude Code skills folder:
 
 Then invoke with `/handoff`. The handoff document is written to your home directory as `handoff-<timestamp>.md`.
 
+### Tailor it to the next session
+
+Pass a description of what the next session will focus on, and the document is tailored to that purpose — the relevant decisions, files, and state are pulled to the front, and Next Steps become concrete moves toward that goal:
+
+```
+/handoff finish the OAuth refresh-token bug, the repro is in tests/auth_test.py
+```
+
+With no arguments it falls back to a general, comprehensive handoff. (A handoff is far more useful when it knows what the next agent will actually do — so describing the purpose is encouraged.)
+
 ## Cross-platform
 
 The skill instructions are **identical on every platform** — all OS-specific logic lives in `handoff_run.sh`, so there are no per-OS branches in `SKILL.md` (which keeps the main-thread context minimal and the prompt cache-stable). The launcher handles:
