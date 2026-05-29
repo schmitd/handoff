@@ -2,6 +2,8 @@
 
 Work entirely in your own context. Final reply = ONLY the absolute path you write — nothing else.
 
+Only run the steps below. Summarize from `TMP_FILE` alone — never search, grep, fetch, or open any other file.
+
 Your spawn prompt gives a **NEXT-SESSION PURPOSE**. If it's a real purpose (not "none"), make it the guide: tailor every section toward it and write Next steps as concrete moves toward it. If "none", write a general, comprehensive handoff.
 
 **STEP 1 — extract.** Run: `bash "$HOME/.claude/skills/handoff/scripts/handoff_run.sh"`
