@@ -162,7 +162,9 @@ def render(rec, max_block):
                 if bt == "text":
                     parts.append(clip(b.get("text", ""), max_block))
                 elif bt == "thinking":
-                    parts.append("(thinking) " + clip(b.get("thinking", ""), max_block // 2))
+                    # Thinking is the bulkiest, least necessary part for a summary —
+                    # keep just enough to convey intent.
+                    parts.append("(thinking) " + clip(b.get("thinking", ""), 500))
                 elif bt == "tool_use":
                     name = b.get("name", "?")
                     inp = json.dumps(b.get("input", {}), ensure_ascii=False)
@@ -180,7 +182,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--session-id", default=os.environ.get("CLAUDE_CODE_SESSION_ID", ""))
     ap.add_argument("--transcript", default="")
-    ap.add_argument("--max-block", type=int, default=4000,
+    ap.add_argument("--max-block", type=int, default=2500,
                     help="char cap per rendered block before clipping")
     args = ap.parse_args()
 
