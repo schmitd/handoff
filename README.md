@@ -28,6 +28,15 @@ Then invoke with `/handoff`.
 
 ## Notes / portability
 
-This was built on Windows + WSL (the transcript store lives on the Windows side at `~/.claude/projects/<slug>/<session-id>.jsonl`, and `extract_context.py` runs under WSL `python3`). The output path and the WSL invocation in `SKILL.md` are hard-coded to that setup — adjust the paths in `SKILL.md` for your environment.
+This was built on **Windows + WSL** (the transcript store lives on the Windows side at `~/.claude/projects/<slug>/<session-id>.jsonl`, and `extract_context.py` runs under WSL `python3`).
+
+Paths are **resolved dynamically at skill-load time** via the `` !`<command>` `` substitution feature — `SKILL.md` derives the script path from `$HOME` and the output directory from `wslpath -w "$HOME"`, so nothing is hardcoded to a specific username or WSL distro. You should be able to drop this into any Windows + WSL Claude Code setup unchanged.
+
+Two environment assumptions remain, and they are **not** universal:
+
+- **Git Bash / MINGW must be the Bash tool's shell.** Claude Code only uses Git Bash if Git for Windows is installed; otherwise it falls back to PowerShell, and the bash-syntax `!` blocks here won't resolve.
+- **WSL with `python3` must be present.** The extractor is invoked through `wsl.exe`.
+
+For a non-WSL machine (native Windows-only, macOS, or Linux) you'd want to invoke `python3` natively instead of through `wsl.exe` and write the output to `$HOME` directly. The core `extract_context.py` is plain stdlib Python and already globs `~/.claude/projects` as well as `/mnt/c/...`, so it runs anywhere Python does — only the `SKILL.md` wrapper is environment-specific.
 
 Inspired by [Matt Pocock's handoff skill](https://www.aihero.dev/skills-handoff), reworked to keep the main thread's context untouched.

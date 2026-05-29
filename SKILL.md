@@ -9,6 +9,8 @@ description: >-
   "pass this to another AI", or wants to checkpoint context to a file without
   bloating the current thread. Produces a markdown file in the user's WSL home
   directory; the main agent never reads it.
+allowed-tools: Bash
+shell: bash
 ---
 
 # Handoff
@@ -31,17 +33,36 @@ summary plus everything after it. Anything before that summary was already
 dropped from the live window, so the handoff drops it too. The bundled
 `scripts/extract_context.py` implements this slicing.
 
+## Auto-detected paths (resolved at skill load)
+
+These are filled in for the current machine when the skill loads — derived from
+`$HOME` and `wslpath`, so nothing is hardcoded to a specific username or WSL
+distro:
+
+- **EXTRACTOR** (WSL path to the bundled script): !`echo "${HOME/\/c\//\/mnt\/c\/}/.claude/skills/handoff/scripts/extract_context.py"`
+- **OUTPUT_DIR** (Windows UNC of your WSL home): !`wsl.exe -e bash -lc 'wslpath -w "$HOME"'`
+
+When you build the subagent prompt below, substitute the resolved values above
+wherever you see `<EXTRACTOR>` and `<OUTPUT_DIR>`.
+
+> Environment assumption: this skill targets a Windows + WSL Claude Code setup
+> (transcripts live on the Windows side; `python3` runs under WSL; the Bash tool
+> is Git Bash/MINGW, which is what lets the `!` blocks above call `wsl.exe`). On a
+> machine without WSL or without Git Bash, the expansions above won't resolve and
+> the steps below will fail — see the repo README for porting notes.
+
 ## What you (the main agent) must do
 
 Keep your own footprint minimal. **Do NOT** read the transcript, **do NOT** read
 the produced handoff file, and **do NOT** summarize the conversation yourself —
 doing any of these defeats the entire purpose.
 
-Spawn **exactly one** subagent (general-purpose) with the verbatim prompt below.
-When it returns, tell the user the file path in a single line and stop. Do not
-echo the handoff contents.
+Spawn **exactly one** subagent (general-purpose). Take the prompt below, replace
+`<EXTRACTOR>` and `<OUTPUT_DIR>` with the resolved values, and pass it verbatim.
+When the subagent returns, tell the user the file path in a single line and stop.
+Do not echo the handoff contents.
 
-### Subagent prompt (pass verbatim)
+### Subagent prompt (substitute `<EXTRACTOR>` / `<OUTPUT_DIR>`, then pass verbatim)
 
 ```
 You are producing a context-handoff document. Do all work in your own context;
@@ -49,8 +70,8 @@ your final reply must be ONLY the absolute path to the file you wrote (one line)
 Do not paste the conversation or the summary back to me.
 
 STEP 1 — Extract the current working context (runs in WSL):
-  wsl.exe -e bash -lc "python3 /mnt/c/Users/dschmitt/.claude/skills/handoff/scripts/extract_context.py --session-id \"$CLAUDE_CODE_SESSION_ID\" > /home/dschmitt/.handoff-context.tmp"
-Then read /home/dschmitt/.handoff-context.tmp with the Read tool (it begins with a
+  wsl.exe -e bash -lc "python3 '<EXTRACTOR>' --session-id $CLAUDE_CODE_SESSION_ID > \$HOME/.handoff-context.tmp"
+Then read <OUTPUT_DIR>\.handoff-context.tmp with the Read tool (it begins with a
 <<<HANDOFF-CONTEXT-META>>> block telling you whether a compaction was found and how
 many records were emitted). If the file is long, read it in chunks with offset.
 The script auto-locates the live transcript; if --session-id is empty it falls
@@ -91,18 +112,18 @@ concrete; a stranger agent must be able to resume cold. Use exactly this structu
   The most recent thing the user asked, quoted, so intent isn't lost in paraphrase.
 
 STEP 4 — Write that document with the Write tool to:
-  \\wsl.localhost\ubuntu\home\dschmitt\handoff-<timestamp>.md
+  <OUTPUT_DIR>\handoff-<timestamp>.md
 
 STEP 5 — Clean up the temp file:
-  wsl.exe -e bash -lc "rm -f /home/dschmitt/.handoff-context.tmp"
+  wsl.exe -e bash -lc "rm -f \$HOME/.handoff-context.tmp"
 
-STEP 6 — Reply with ONLY the path: \\wsl.localhost\ubuntu\home\dschmitt\handoff-<timestamp>.md
+STEP 6 — Reply with ONLY the path: <OUTPUT_DIR>\handoff-<timestamp>.md
 ```
 
 ## After the subagent returns
 
 Report the path to the user in one line, e.g.:
 
-> Handoff written to `\\wsl.localhost\ubuntu\home\dschmitt\handoff-20260529-094210.md`
+> Handoff written to `\\wsl.localhost\Ubuntu\home\<you>\handoff-20260529-094210.md`
 
 That's it. Your context is unchanged apart from this exchange.
