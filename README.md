@@ -11,8 +11,9 @@ A naive handoff makes the main agent summarize its own conversation inline, dump
 ## How it works
 
 1. The main agent spawns exactly one subagent and otherwise does nothing.
-2. The subagent runs [`scripts/extract_context.py`](scripts/extract_context.py), which locates the live session transcript (`.jsonl`) and slices it to the **current working context**: the most recent compaction summary plus everything after it (anything before was already dropped from the live window). If the session was never compacted, the whole conversation is used.
-3. The subagent distills that into a structured handoff Markdown file and returns only the path.
+2. The subagent runs [`scripts/handoff_run.sh`](scripts/handoff_run.sh), a launcher that picks a working interpreter (native `python3`/`python`, or WSL `python3` as a fallback), runs [`scripts/extract_context.py`](scripts/extract_context.py), and prints two host-form paths (`TMP_FILE`, `HANDOFF_FILE`).
+3. `extract_context.py` locates the live session transcript (`.jsonl`) and slices it to the **current working context**: the most recent compaction summary plus everything after it (anything before was already dropped from the live window). If the session was never compacted, the whole conversation is used.
+4. The subagent distills that into a structured handoff Markdown file (written to your home directory) and returns only the path.
 
 ## Install
 
@@ -21,22 +22,26 @@ Copy this directory into your Claude Code skills folder:
 ```
 ~/.claude/skills/handoff/
 ├── SKILL.md
-└── scripts/extract_context.py
+└── scripts/
+    ├── handoff_run.sh        # portable launcher (interpreter + path resolution)
+    └── extract_context.py    # transcript slicer (stdlib only)
 ```
 
-Then invoke with `/handoff`.
+Then invoke with `/handoff`. The handoff document is written to your home directory as `handoff-<timestamp>.md`.
 
-## Notes / portability
+## Cross-platform
 
-This was built on **Windows + WSL** (the transcript store lives on the Windows side at `~/.claude/projects/<slug>/<session-id>.jsonl`, and `extract_context.py` runs under WSL `python3`).
+The skill instructions are **identical on every platform** — all OS-specific logic lives in `handoff_run.sh`, so there are no per-OS branches in `SKILL.md` (which keeps the main-thread context minimal and the prompt cache-stable). The launcher handles:
 
-Paths are **resolved dynamically at skill-load time** via the `` !`<command>` `` substitution feature — `SKILL.md` derives the script path from `$HOME` and the output directory from `wslpath -w "$HOME"`, so nothing is hardcoded to a specific username or WSL distro. You should be able to drop this into any Windows + WSL Claude Code setup unchanged.
+| Environment | Interpreter | Notes |
+|---|---|---|
+| Linux | native `python3` | transcripts at `~/.claude/projects/`, output to `$HOME` |
+| macOS (zsh/bash) | native `python3` | same as Linux |
+| Windows + Git Bash, native Python | native `python3`/`python` | output to the Windows `%USERPROFILE%` |
+| Windows + Git Bash, **no** native Python | **WSL** `python3` | transcripts/script reached via `/mnt/c/...`; `cygpath` converts paths to `C:\...` host form |
 
-Two environment assumptions remain, and they are **not** universal:
+**The one hard requirement:** the Claude Code Bash tool must be a real bash — native `bash`/`zsh` on Unix, or **Git Bash / MINGW on Windows**. Claude Code only uses Git Bash if Git for Windows is installed; without it the Bash tool falls back to PowerShell, where these bash-based scripts won't run. (Install Git for Windows on a Windows host.)
 
-- **Git Bash / MINGW must be the Bash tool's shell.** Claude Code only uses Git Bash if Git for Windows is installed; otherwise it falls back to PowerShell, and the bash-syntax `!` blocks here won't resolve.
-- **WSL with `python3` must be present.** The extractor is invoked through `wsl.exe`.
-
-For a non-WSL machine (native Windows-only, macOS, or Linux) you'd want to invoke `python3` natively instead of through `wsl.exe` and write the output to `$HOME` directly. The core `extract_context.py` is plain stdlib Python and already globs `~/.claude/projects` as well as `/mnt/c/...`, so it runs anywhere Python does — only the `SKILL.md` wrapper is environment-specific.
+The core `extract_context.py` is plain stdlib Python and globs both `~/.claude/projects` and `/mnt/c/.../.claude/projects`, so it runs anywhere Python does.
 
 Inspired by [Matt Pocock's handoff skill](https://www.aihero.dev/skills-handoff), reworked to keep the main thread's context untouched.
