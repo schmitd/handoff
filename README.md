@@ -21,11 +21,15 @@ Copy this directory into your Claude Code skills folder:
 
 ```
 ~/.claude/skills/handoff/
-├── SKILL.md
+├── SKILL.md                       # thin dispatcher (all that loads into the main thread)
+├── references/
+│   └── handoff-task.md            # the procedure — read by the subagent, never by the main thread
 └── scripts/
-    ├── handoff_run.sh        # portable launcher (interpreter + path resolution)
-    └── extract_context.py    # transcript slicer (stdlib only)
+    ├── handoff_run.sh             # portable launcher (interpreter + path resolution)
+    └── extract_context.py         # transcript slicer (stdlib only)
 ```
+
+`SKILL.md` is deliberately minimal: when the skill triggers, only its body loads into the main thread, so the full step-by-step procedure lives in `references/handoff-task.md` (a level-3 bundled file) and is read *by the subagent in its own context*. The main agent only orchestrates — it never loads the procedure, the transcript, or the summary.
 
 Then invoke with `/handoff`. The handoff document is written to your home directory as `handoff-<timestamp>.md`.
 
