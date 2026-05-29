@@ -4,7 +4,9 @@ A minimal [Claude Code](https://claude.com/claude-code) skill that snapshots the
 
 ## Why
 
-A naive handoff makes the main agent summarize its own conversation inline, dumping a large summary back into the live context window — exactly the bloat you wanted to avoid. This skill does all the summarization inside an **isolated subagent** that reads the session transcript **from disk** (an out-of-band channel the main thread never pays for), distills it, and writes the file. The main thread gains only the skill instructions, one subagent spawn (~470 tokens), and a one-line path back — the ~42k tokens of distillation work stay isolated.
+I was inspired by Matt Pocock.
+
+A naive handoff makes the main agent summarize its own conversation inline, dumping a large summary back into the live context window — exactly the bloat you wanted to avoid. This skill does all the summarization inside an **isolated subagent** that reads the session transcript **from disk** (an out-of-band channel the main thread never pays for), distills/compacts it, and writes the file. The main thread gains only the skill instructions, one subagent spawn (~470 tokens), and a one-line path back — the ~42k tokens of distillation work stay isolated.
 
 ## How it works
 
