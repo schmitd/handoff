@@ -16,4 +16,4 @@ Don't summarize or read the transcript yourself — spawn exactly one general-pu
 
 where `<TASK_FILE>` = !`cygpath -w "$HOME/.claude/skills/handoff/references/handoff-task.md" 2>/dev/null || echo "$HOME/.claude/skills/handoff/references/handoff-task.md"`
 
-Then output that path alone — no preamble.
+Then output the path alone, without preamble.
