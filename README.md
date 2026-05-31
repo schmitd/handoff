@@ -1,61 +1,53 @@
 # handoff
 
-A minimal [Claude Code](https://claude.com/claude-code) skill that snapshots the current conversation into a standalone handoff document for another AI/agent to pick up — like `/compact`, but **without contaminating the main thread**.
+Minimal handoff skills for Claude Code and Codex.
 
-## Why
+The intent is the same in both variants: keep the main thread clean by spawning
+one isolated subagent, reading the live transcript/rollout from disk, writing a
+standalone Markdown handoff, and returning only the file path.
 
-I was inspired by Matt Pocock.
+## Variants
 
-A naive handoff makes the main agent summarize its own conversation inline, dumping a large summary back into the live context window — exactly the bloat you wanted to avoid. This skill does all the summarization inside an **isolated subagent** that reads the session transcript **from disk** (an out-of-band channel the main thread never pays for), distills/compacts it, and writes the file. The main thread gains only the skill instructions, one subagent spawn (~470 tokens), and a one-line path back — the ~42k tokens of distillation work stay isolated.
+- `claude/` - Claude Code version. Reads `~/.claude/projects/**/*.jsonl` and uses Claude Code transcript fields.
+- `codex/` - Codex version. Reads `~/.codex/sessions/**/*.jsonl` and uses Codex rollout fields.
 
-## How it works
-
-1. The main agent spawns exactly one subagent and otherwise does nothing.
-2. The subagent runs [`scripts/handoff_run.sh`](scripts/handoff_run.sh), a launcher that picks a working interpreter (native `python3`/`python`, or WSL `python3` as a fallback), runs [`scripts/extract_context.py`](scripts/extract_context.py), and prints two host-form paths (`TMP_FILE`, `HANDOFF_FILE`).
-3. `extract_context.py` locates the live session transcript (`.jsonl`) and slices it to the **current working context**: the most recent compaction summary plus everything after it (anything before was already dropped from the live window). If the session was never compacted, the whole conversation is used.
-4. The subagent distills that into a structured handoff Markdown file (written to your home directory) and returns only the path.
+They are intentionally separate. The Claude version is better for Claude Code;
+the Codex version is better for Codex.
 
 ## Install
 
-Copy this directory into your Claude Code skills folder:
+Claude Code:
 
-```
-~/.claude/skills/handoff/
-├── SKILL.md                       # thin dispatcher (all that loads into the main thread)
-├── references/
-│   └── handoff-task.md            # the procedure — read by the subagent, never by the main thread
-└── scripts/
-    ├── handoff_run.sh             # portable launcher (interpreter + path resolution)
-    └── extract_context.py         # transcript slicer (stdlib only)
+```bash
+cp -R claude ~/.claude/skills/handoff
 ```
 
-`SKILL.md` is deliberately minimal: when the skill triggers, only its body loads into the main thread, so the full step-by-step procedure lives in `references/handoff-task.md` (a level-3 bundled file) and is read *by the subagent in its own context*. The main agent only orchestrates — it never loads the procedure, the transcript, or the summary.
+Codex:
 
-Then invoke with `/handoff`. The handoff document is written to your home directory as `handoff-<timestamp>.md`.
-
-### Tailor it to the next session
-
-Pass a description of what the next session will focus on, and the document is tailored to that purpose — the relevant decisions, files, and state are pulled to the front, and Next Steps become concrete moves toward that goal:
-
-```
-/handoff finish the OAuth refresh-token bug, the repro is in tests/auth_test.py
+```bash
+cp -R codex ~/.codex/skills/handoff
 ```
 
-With no arguments it falls back to a general, comprehensive handoff. (A handoff is far more useful when it knows what the next agent will actually do — so describing the purpose is encouraged.)
+Then ask for a handoff, optionally with the next session's focus:
 
-## Cross-platform
+```text
+handoff finish the OAuth refresh-token bug
+```
 
-The skill instructions are **identical on every platform** — all OS-specific logic lives in `handoff_run.sh`, so there are no per-OS branches in `SKILL.md` (which keeps the main-thread context minimal and the prompt cache-stable). The launcher handles:
+## Layout
 
-| Environment | Interpreter | Notes |
-|---|---|---|
-| Linux | native `python3` | transcripts at `~/.claude/projects/`, output to `$HOME` |
-| macOS (zsh/bash) | native `python3` | same as Linux |
-| Windows + Git Bash, native Python | native `python3`/`python` | output to the Windows `%USERPROFILE%` |
-| Windows + Git Bash, **no** native Python | **WSL** `python3` | transcripts/script reached via `/mnt/c/...`; `cygpath` converts paths to `C:\...` host form |
+```text
+claude/
+  SKILL.md
+  references/handoff-task.md
+  scripts/handoff_run.sh
+  scripts/extract_context.py
+codex/
+  SKILL.md
+  references/handoff-task.md
+  scripts/handoff_run.sh
+  scripts/extract_context.py
+```
 
-**The one hard requirement:** the Claude Code Bash tool must be a real bash — native `bash`/`zsh` on Unix, or **Git Bash / MINGW on Windows**. Claude Code only uses Git Bash if Git for Windows is installed; without it the Bash tool falls back to PowerShell, where these bash-based scripts won't run. (Install Git for Windows on a Windows host.)
-
-The core `extract_context.py` is plain stdlib Python and globs both `~/.claude/projects` and `/mnt/c/.../.claude/projects`, so it runs anywhere Python does.
-
-Inspired by [Matt Pocock's handoff skill](https://www.aihero.dev/skills-handoff), reworked to keep the main thread's context untouched.
+Inspired by Matt Pocock's handoff skill and adapted to keep summarization out of
+the active agent context.
