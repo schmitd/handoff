@@ -2,7 +2,7 @@
 
 Work entirely in your own context. Final reply = ONLY the absolute path you write — nothing else.
 
-Only run the steps below. Summarize from `TMP_FILE` alone — never search, grep, fetch, or open any other file.
+Tools: only Bash (STEP 1 and STEP 4), Read, and Write. Summarize only from `TMP_FILE`.
 
 Your spawn prompt gives a **NEXT-SESSION PURPOSE**. If it's a real purpose (not "none"), make it the guide: tailor every section toward it and write Next steps as concrete moves toward it. If "none", write a general, comprehensive handoff.
 

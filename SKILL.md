@@ -9,11 +9,11 @@ allowed-tools: Bash
 argument-hint: "[next session's focus]"
 ---
 
-Don't summarize here — delegate so this thread stays clean. Spawn exactly one general-purpose subagent whose whole prompt is:
+Don't summarize or read the transcript yourself — spawn exactly one general-purpose subagent whose whole prompt is:
 
 `NEXT-SESSION PURPOSE: $ARGUMENTS` (use `none` if empty)
 `Read <TASK_FILE> and follow it exactly; reply with ONLY the absolute path you write.`
 
 where `<TASK_FILE>` = !`cygpath -w "$HOME/.claude/skills/handoff/references/handoff-task.md" 2>/dev/null || echo "$HOME/.claude/skills/handoff/references/handoff-task.md"`
 
-Then report that path. Read nothing else yourself.
+Then output that path alone — no preamble.
